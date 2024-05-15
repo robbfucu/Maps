@@ -1,8 +1,9 @@
-import { View, StyleSheet, Image } from 'react-native'
+import { View, StyleSheet, Image, TouchableOpacity } from 'react-native'
 import React from 'react'
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps'
 import { Marker, Callout } from 'react-native-maps'
 import { Text, Icon, SearchBar, Button } from '@rneui/themed'
+import firestore from '@react-native-firebase/firestore';
 
 export default class Map extends React.Component {
 
@@ -17,6 +18,7 @@ export default class Map extends React.Component {
       searchString: "",
       distance: 40,
       selectedPlace: null,
+      placeSuggestions: ["1"]
     }
 
   }
@@ -44,6 +46,20 @@ export default class Map extends React.Component {
 
   searchSection = () => {
 
+    const handleSearchInput = (text) => {
+      this.setState({ searchString: text })
+      if (text !== "") {
+        firestore().collection('PLACES')
+          .where('name', '>=', text)
+          .where('name', '<=', text + '\uf8ff')
+          .get()
+          .then((placeSuggestions) => {
+            this.setState({ placeSuggestions: placeSuggestions.docs })
+            console.log(this.state.placeSuggestions.length)
+          })
+      }
+    }
+
     const handleSearch = () => {
       let filteredPlaces = placeData.filter(g => g.name.toLowerCase().includes(this.state.searchString.toLowerCase()))
       this.setState({
@@ -61,37 +77,56 @@ export default class Map extends React.Component {
         <Text style={{ textAlign: 'center', fontWeight: 'bold', fontSize: 30, margin: 10 }}>
           Search
         </Text>
-        <SearchBar
-          placeholder="Search Here..."
-          ref={search => this.search = search}
-          onChangeText={(text) => { this.setState({ searchString: text }) }}
-          value={this.state.searchString}
-          lightTheme={true}
-          round={true}
-          containerStyle={{ backgroundColor: '#0000' }} />
-        <View style={{ padding: 10 }}>
-          <Text style={{ textAlign: 'center' }}>
-            Distancia: KM
-          </Text>
-          <View style={{ justifyContent: 'space-between', flexDirection: 'row' }}>
-            <Button onPress={() => { handleReset() }}
-              containerStyle={{ width: '49%', borderRadius: 5, marginHorizontal: 2 }}
-            >
-              <Text style={{ fontWeight: 'bold', color: 'white', fontSize: 20, margin: 10 }}>
-                Reset
-              </Text>
-              <Icon name='refresh' color='white' />
-            </Button>
-            <Button onPress={() => { handleSearch() }}
-              containerStyle={{ width: '49%', borderRadius: 5, marginHorizontal: 2 }}>
-              <Text style={{ fontWeight: 'bold', color: 'white', fontSize: 20, margin: 10 }}>
-                Buscar
-              </Text>
-              <Icon name='ei-search' color='white' />
-            </Button>
+        <View>
+          <SearchBar
+            placeholder="Search Here..."
+            ref={search => this.search = search}
+            onChangeText={(text) => { this.setState({ searchString: text }) }}
+            value={this.state.searchString}
+            lightTheme={true}
+            round={true}
+            containerStyle={{ backgroundColor: '#0000' }} />
+        </View>
+        <View>
+          {this.state.placeSuggestions > 0 && this.state.searchString !== ""
+            &&
+            <View style={{ width: "100%", height: 100, zIndex: 10, position: 'absolute', alignItems: 'center', top: -10 }}>
+              {
+                this.state.placeSuggestions.map((suggestedPlace) => {
+                  <TouchableOpacity style={{ backgroundColor: '#FFFF', borderColor: '#CECECE', borderWidth: 1, width: '95%', borderRadius: 5 }}
+                    onPress={() => { console.log("clicked") }}
+                  >
+                    <Text style={{ padding: 10, fontSize: 17 }}>suggestedPlace.data().name</Text>
+                  </TouchableOpacity>
+                })
+              }
+            </View>
+          }
+          <View style={{ padding: 10 }}>
+            <Text style={{ textAlign: 'center' }}>
+              Distancia: KM
+            </Text>
+            <View style={{ justifyContent: 'space-between', flexDirection: 'row' }}>
+              <Button onPress={() => { handleReset() }}
+                containerStyle={{ width: '49%', borderRadius: 5, marginHorizontal: 2 }}
+              >
+                <Text style={{ fontWeight: 'bold', color: 'white', fontSize: 20, margin: 10 }}>
+                  Reset
+                </Text>
+                <Icon name='refresh' color='white' />
+              </Button>
+              <Button onPress={() => { handleSearch() }}
+                containerStyle={{ width: '49%', borderRadius: 5, marginHorizontal: 2 }}>
+                <Text style={{ fontWeight: 'bold', color: 'white', fontSize: 20, margin: 10 }}>
+                  Buscar
+                </Text>
+                <Icon name='ei-search' color='white' />
+              </Button>
+            </View>
           </View>
         </View>
       </View >
+
     )
   }
 
